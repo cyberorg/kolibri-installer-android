@@ -140,11 +140,6 @@ class Application(pew.ui.PEWApp):
             self.remoteshell_thread.daemon = True
             self.remoteshell_thread.start()
 
-        from msssync import run_sync
-        self.msssync_thread = pew.ui.PEWThread(target=run_sync)
-        self.msssync_thread.daemon = True
-        self.msssync_thread.start()
-
     def get_main_window(self):
         return self.view
 
