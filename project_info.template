@@ -1,5 +1,5 @@
 {
-  "name": "Kolibri-MSS@Home",
+  "name": "Kolibri - MSS@Home",
   "version": "${apk_version}",
   "build_number": "${build_number}",
   "identifier": "org.learningequality.Kolibri",

@@ -53,7 +53,8 @@ def run_sync():
     syncuser=configur.get('MSS','SYNC_USER')
     syncpass=configur.get('MSS','SYNC_PASS')
     syncfacility=configur.get('MSS','SYNC_FACILITY')
-    main(["manage", "sync", "--baseurl", "http://content.myscoolserver.in/", "--username", syncuser, "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
+    syncserver=configur.get('MSS','SYNC_SERVER')
+    main(["manage", "sync", "--baseurl", syncserver, "--username", syncuser, "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
 
 # start the kolibri server as a thread
 thread = pew.ui.PEWThread(target=start_kolibri_server)
