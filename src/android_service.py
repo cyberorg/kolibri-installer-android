@@ -39,7 +39,7 @@ make_service_foreground("Kolibri is running...", "Click here to resume.")
 
 #MSS sync
 def run_sync():
-    threading.Timer(60.0, run_sync).start()
+    threading.Timer(900.0, run_sync).start()
     from kolibri.utils.cli import main
     from configparser import ConfigParser
     KOLIBRI_HOME=os.environ.get("KOLIBRI_HOME")
