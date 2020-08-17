@@ -6,7 +6,6 @@ import os
 import pew.ui
 import shutil
 import time
-import threading
 
 from config import FLASK_PORT
 
@@ -36,25 +35,6 @@ if not os.path.exists(HOME_PATH) and os.path.exists(HOME_TEMPLATE_PATH):
 
 # ensure the service stays running by "foregrounding" it with a persistent notification
 make_service_foreground("Kolibri is running...", "Click here to resume.")
-
-#MSS sync
-def run_sync():
-    threading.Timer(900.0, run_sync).start()
-    from kolibri.utils.cli import main
-    from configparser import ConfigParser
-    KOLIBRI_HOME=os.environ.get("KOLIBRI_HOME")
-    syncini_path = os.path.join(KOLIBRI_HOME, "syncoptions.ini")
-    try:
-        file = open(syncini_path, 'r')
-    except IOError:
-        return
-    configur = ConfigParser()
-    configur.read(syncini_path)
-    syncuser=configur.get('MSS','SYNC_USER')
-    syncpass=configur.get('MSS','SYNC_PASS')
-    syncfacility=configur.get('MSS','SYNC_FACILITY')
-    syncserver=configur.get('MSS','SYNC_SERVER')
-    main(["manage", "sync", "--baseurl", syncserver, "--username", syncuser, "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
 
 # start the kolibri server as a thread
 thread = pew.ui.PEWThread(target=start_kolibri_server)
