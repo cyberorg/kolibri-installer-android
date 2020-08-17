@@ -162,7 +162,7 @@ def run_sync():
     syncuser=configur.get('SYNC_USER')
     syncon=configur.getboolean('SYNC_ON')
     if (synon):
-        synfacility=Facility.get_default_facility().id
+        syncfacility=Facility.get_default_facility().id
         syncpass="sync"+syncfacility
         syncserver=configur.get('SYNC_SERVER') #default
         syncdelay=configur.get('SYNC_DELAY')
