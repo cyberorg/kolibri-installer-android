@@ -147,15 +147,15 @@ def run_sync():
     configur = ConfigParser()
 
     try:
-        file = open(syncini_path, 'r')
+        file = open(syncini_file, 'r')
     except IOError:
         configur['DEFAULT'] = { 'SYNC_ON': 'True',
                                 'SYNC_SERVER': 'content.myscoolserver.in',
                                 'SYNC_USER': 'syncuser',
                                 'SYNC_DELAY': '900.0'
                                 }
-        with open(, 'w') as configfile:
-            configur.write(syncini_file)
+        with open(syncini_file, 'w') as configfile:
+            configur.write(configfile)
         return
 
     configur.read(syncini_file)
