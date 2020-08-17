@@ -167,7 +167,7 @@ def run_sync():
     configur.read(syncini_file)
     syncuser=configur.get('SYNC_USER')
     syncon=configur.getboolean('SYNC_ON')
-    if (synon):
+    if (syncon):
         syncfacility=Facility.get_default_facility().id
         syncpass="sync"+syncfacility
         syncserver=configur.get('SYNC_SERVER') #default
