@@ -6,6 +6,10 @@ import os
 import pew.ui
 import shutil
 import time
+import sys 
+import threading
+from kolibri.utils.cli import main
+from configparser import ConfigParser
 
 from config import FLASK_PORT
 
@@ -61,6 +65,40 @@ def do_share_by_intent():
 
     return "<html><body style='background: white;'>OK, boomer</body></html>"
 
+def run_sync():
+
+    from django.core.management import execute_from_command_line
+    
+    execute_from_command_line(sys.argv)
+    
+    from kolibri.core.auth.models import Facility   
+    
+    KOLIBRI_HOME = os.environ.get("KOLIBRI_HOME")
+    syncini_file = os.path.join(KOLIBRI_HOME, "syncoptions.ini")
+    configur = ConfigParser()
+
+    try:
+        file = open(syncini_file, 'r')
+    except IOError:
+        configur['DEFAULT'] = { 'SYNC_ON': 'True',
+                                'SYNC_SERVER': 'content.myscoolserver.in',
+                                'SYNC_USER': 'syncuser',
+                                'SYNC_DELAY': '900.0'
+                                }
+        with open(syncini_file, 'w') as configfile:
+            configur.write(configfile)
+        return
+
+    configur.read(syncini_file)
+    syncuser=configur.get('DEFAULT', 'SYNC_USER')
+    syncon=configur.getboolean('DEFAULT', 'SYNC_ON')
+    if (syncon):
+        syncfacility=Facility.get_default_facility().id
+        syncpass="sync"+syncfacility
+        syncserver=configur.get('DEFAULT', 'SYNC_SERVER') #default
+        syncdelay=configur.get('DEFAULT', 'SYNC_DELAY')
+        threading.Timer(float(syncdelay), run_sync).start()
+        main(["manage", "sync", "--baseurl", syncserver, "--username", syncuser, "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
 
 if __name__ == "__main__":
     flaskapp.run(host="localhost", port=FLASK_PORT)
