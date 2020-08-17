@@ -1,7 +1,12 @@
 import json
 import logging
 import os
+import threading
+
 from jnius import autoclass, cast, jnius
+from kolibri.utils.cli import main
+from configparser import ConfigParser
+from kolibri.core.auth.models import Facility
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -133,3 +138,32 @@ def make_service_foreground(title, message):
     notification_builder.setAutoCancel(True)
     new_notification = notification_builder.getNotification()
     service.startForeground(1, new_notification)
+
+# MSS Cloud sync for primary facility on user device
+def run_sync():
+    KOLIBRI_HOME = os.environ.get("KOLIBRI_HOME")
+    syncini_file = os.path.join(KOLIBRI_HOME, "syncoptions.ini")
+    configur = ConfigParser()
+
+    try:
+        file = open(syncini_path, 'r')
+    except IOError:
+        configur['DEFAULT'] = { 'SYNC_ON': 'True',
+                                'SYNC_SERVER': 'content.myscoolserver.in',
+                                'SYNC_USER': 'syncuser',
+                                'SYNC_DELAY': '900.0'
+                                }
+        with open(, 'w') as configfile:
+            configur.write(syncini_file)
+        return
+
+    configur.read(syncini_file)
+    syncuser=configur.get('SYNC_USER')
+    syncon=configur.getboolean('SYNC_ON')
+    if (synon):
+        synfacility=Facility.get_default_facility().id
+        syncpass="sync"+syncfacility
+        syncserver=configur.get('SYNC_SERVER') #default
+        syncdelay=configur.get('SYNC_DELAY')
+        threading.Timer(float(syncdelay), run_sync).start()
+        main(["manage", "sync", "--baseurl", syncserver, "--username", "syncuser", "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
