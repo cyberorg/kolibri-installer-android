@@ -173,4 +173,4 @@ def run_sync():
         syncserver=configur.get('DEFAULT', 'SYNC_SERVER') #default
         syncdelay=configur.get('DEFAULT', 'SYNC_DELAY')
         threading.Timer(float(syncdelay), run_sync).start()
-        main(["manage", "sync", "--baseurl", syncserver, "--username", "syncuser", "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
+        main(["manage", "sync", "--baseurl", syncserver, "--username", syncuser, "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
