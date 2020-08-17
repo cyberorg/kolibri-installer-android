@@ -165,12 +165,12 @@ def run_sync():
         return
 
     configur.read(syncini_file)
-    syncuser=configur.get('SYNC_USER')
-    syncon=configur.getboolean('SYNC_ON')
+    syncuser=configur.get('DEFAULT', 'SYNC_USER')
+    syncon=configur.getboolean('DEFAULT', 'SYNC_ON')
     if (syncon):
         syncfacility=Facility.get_default_facility().id
         syncpass="sync"+syncfacility
-        syncserver=configur.get('SYNC_SERVER') #default
-        syncdelay=configur.get('SYNC_DELAY')
+        syncserver=configur.get('DEFAULT', 'SYNC_SERVER') #default
+        syncdelay=configur.get('DEFAULT', 'SYNC_DELAY')
         threading.Timer(float(syncdelay), run_sync).start()
         main(["manage", "sync", "--baseurl", syncserver, "--username", "syncuser", "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
