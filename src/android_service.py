@@ -64,15 +64,19 @@ def run_sync():
         return
 
     configur.read(syncini_file)
-    syncuser=configur.get('DEFAULT', 'SYNC_USER')
-    syncon=configur.getboolean('DEFAULT', 'SYNC_ON')
-    if (syncon):
-        syncfacility=Facility.get_default_facility().id
-        syncpass="sync"+syncfacility
-        syncserver=configur.get('DEFAULT', 'SYNC_SERVER') #default
-        syncdelay=configur.get('DEFAULT', 'SYNC_DELAY')
-        threading.Timer(float(syncdelay), run_sync).start()
-        main(["manage", "sync", "--baseurl", syncserver, "--username", syncuser, "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
+    syncuser = configur.get('DEFAULT', 'SYNC_USER')
+    syncon = configur.getboolean('DEFAULT', 'SYNC_ON')
+
+    if (syncon):    
+        syncfacility = Facility.get_default_facility()
+        
+        if (syncfacility is not None):
+            syncfacilityid = syncfacility.id
+            syncpass = "sync" + syncfacility
+            syncserver = configur.get('DEFAULT', 'SYNC_SERVER')
+            syncdelay = configur.getfloat('DEFAULT', 'SYNC_DELAY')
+            threading.Timer(syncdelay, run_sync).start()
+            main(["manage", "sync", "--baseurl", syncserver, "--username", syncuser, "--password", syncpass, "--facility", syncfacilityid, "--verbosity", "3"])
 
 # start the kolibri server as a thread
 thread = pew.ui.PEWThread(target=start_kolibri_server)
