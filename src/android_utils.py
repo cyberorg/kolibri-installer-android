@@ -2,10 +2,13 @@ import json
 import logging
 import os
 import threading
+import sys
 
 from jnius import autoclass, cast, jnius
 from kolibri.utils.cli import main
 from configparser import ConfigParser
+from django.core.management import execute_from_command_line
+from kolibri.core.auth.models import Facility
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -140,8 +143,8 @@ def make_service_foreground(title, message):
 
 # MSS Cloud sync for primary facility on user device
 def run_sync():
-    from kolibri.core.auth.models import Facility
 
+    execute_from_command_line(sys.argv)
     KOLIBRI_HOME = os.environ.get("KOLIBRI_HOME")
     syncini_file = os.path.join(KOLIBRI_HOME, "syncoptions.ini")
     configur = ConfigParser()
