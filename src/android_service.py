@@ -6,10 +6,6 @@ import os
 import pew.ui
 import shutil
 import time
-import sys 
-import threading
-from kolibri.utils.cli import main
-from configparser import ConfigParser
 
 from config import FLASK_PORT
 
@@ -40,39 +36,17 @@ if not os.path.exists(HOME_PATH) and os.path.exists(HOME_TEMPLATE_PATH):
 # ensure the service stays running by "foregrounding" it with a persistent notification
 make_service_foreground("Kolibri is running...", "Click here to resume.")
 
-# start the kolibri server as a thread
-thread = pew.ui.PEWThread(target=start_kolibri_server)
-thread.daemon = True
-thread.start()
-run_sync()
-
-# start a parallel Flask server as a backchannel for triggering events
-flaskapp = flask.Flask(__name__)
-
-@flaskapp.route('/share_by_intent')
-def do_share_by_intent():
-
-    args = flask.request.args
-    allowed_args = ["filename", "path", "msg", "app", "mimetype"]
-    kwargs = {key: args[key] for key in args if key in allowed_args}
-
-    if "filename" in kwargs:
-        kwargs["path"] = get_content_file_path(kwargs.pop("filename"))
-
-    logging.error("Sharing: {}".format(kwargs))
-
-    share_by_intent(**kwargs)
-
-    return "<html><body style='background: white;'>OK, boomer</body></html>"
-
+# MSS Cloud sync for primary facility on user device
 def run_sync():
-
+    import threading
+    from kolibri.utils.cli import main
+    from configparser import ConfigParser
     from django.core.management import execute_from_command_line
-    
+
     execute_from_command_line(sys.argv)
-    
-    from kolibri.core.auth.models import Facility   
-    
+
+    from kolibri.core.auth.models import Facility
+
     KOLIBRI_HOME = os.environ.get("KOLIBRI_HOME")
     syncini_file = os.path.join(KOLIBRI_HOME, "syncoptions.ini")
     configur = ConfigParser()
@@ -100,5 +74,32 @@ def run_sync():
         threading.Timer(float(syncdelay), run_sync).start()
         main(["manage", "sync", "--baseurl", syncserver, "--username", syncuser, "--password", syncpass, "--facility", syncfacility, "--verbosity", "3"])
 
+# start the kolibri server as a thread
+thread = pew.ui.PEWThread(target=start_kolibri_server)
+thread.daemon = True
+thread.start()
+run_sync()
+
+# start a parallel Flask server as a backchannel for triggering events
+flaskapp = flask.Flask(__name__)
+
+@flaskapp.route('/share_by_intent')
+def do_share_by_intent():
+
+    args = flask.request.args
+    allowed_args = ["filename", "path", "msg", "app", "mimetype"]
+    kwargs = {key: args[key] for key in args if key in allowed_args}
+
+    if "filename" in kwargs:
+        kwargs["path"] = get_content_file_path(kwargs.pop("filename"))
+
+    logging.error("Sharing: {}".format(kwargs))
+
+    share_by_intent(**kwargs)
+
+    return "<html><body style='background: white;'>OK, boomer</body></html>"
+
+
 if __name__ == "__main__":
     flaskapp.run(host="localhost", port=FLASK_PORT)
+
