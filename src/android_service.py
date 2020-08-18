@@ -72,7 +72,7 @@ def run_sync():
         
         if (syncfacility is not None):
             syncfacilityid = syncfacility.id
-            syncpass = "sync" + str(syncfacility)
+            syncpass = "sync" + syncfacilityid
             syncserver = configur.get('DEFAULT', 'SYNC_SERVER')
             syncdelay = configur.getfloat('DEFAULT', 'SYNC_DELAY')
             threading.Timer(syncdelay, run_sync).start()
