@@ -38,6 +38,11 @@ make_service_foreground("Kolibri is running...", "Click here to resume.")
 
 # MSS Cloud sync for primary facility on user device
 def run_sync():
+    f = open(os.devnull, 'w')
+    sys.stdout = f
+    import logging
+    logging.disable(logging.INFO)
+    logging.disable(logging.WARNING)
     import threading
     from kolibri.utils.cli import main
     from configparser import ConfigParser
