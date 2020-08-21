@@ -111,4 +111,3 @@ def do_share_by_intent():
 
 if __name__ == "__main__":
     flaskapp.run(host="localhost", port=FLASK_PORT)
-
