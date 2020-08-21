@@ -50,8 +50,8 @@ def run_sync():
     f = open(os.devnull, 'w')
     sys.stdout = f
 #    logging.basicConfig(level=logging.INFO)
-    logging.disable(logging.INFO)
-    logging.disable(logging.WARNING)
+#    logging.disable(logging.INFO)
+#    logging.disable(logging.WARNING)
     from configparser import ConfigParser
     KOLIBRI_HOME = os.environ.get("KOLIBRI_HOME")
     syncini_file = os.path.join(KOLIBRI_HOME, "syncoptions.ini")
