@@ -3,8 +3,6 @@ import initialization  # keep this first, to ensure we're set up for other impor
 import flask
 import logging
 import os
-import threading
-import sys
 import pew.ui
 import shutil
 import time
