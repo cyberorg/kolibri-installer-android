@@ -44,7 +44,7 @@ def get_sync_params(syncini_file, grade):
     sync_params['sync_delay'] = configur.getfloat('DEFAULT', 'SYNC_DELAY')
     sync_params['sync_server'] = configur.get('DEFAULT', 'SYNC_SERVER')
     sync_params['channel'] = configur.get('DEFAULT','CHANNEL')
-    sync_params['node'] = configur.get('DEFAULT', grade + '_NODE')
+    sync_params['node_list'] = configur.get('DEFAULT', grade + '_NODE_LIST')
     sync_params['sync_user'] = configur.get('DEFAULT', 'SYNC_ADMIN', fallback=None)
     sync_params['sync_password'] = configur.get('DEFAULT', 'SYNC_ADMIN_PASSWORD', fallback=None)
 
@@ -66,7 +66,7 @@ def delete_import_credentials(syncini_file):
 def import_facility(sync_params, facility_id):
     pid = os.fork()
     if pid == 0:
-        main(["manage", "sync", "--baseurl", sync_params['sync_server'], "--facility", facility_id, "--verbosity", "3", "--username", sync_params['sync_user'], "--password", sync_params['sync_password'], "--no-push", "--noninteractive"])
+        main(["manage", "sync", "--baseurl", sync_params['sync_server'], "--facility", facility_id, "--username", sync_params['sync_user'], "--password", sync_params['sync_password'], "--no-push", "--noninteractive"])
     else:
         os.waitpid(pid, 0)
 
@@ -77,12 +77,14 @@ def import_channel(channel_id):
     else:
         os.waitpid(pid, 0)
 
-def import_content(channel_id, content_node):
-    pid = os.fork()
-    if pid == 0:
-        main(["manage", "importcontent", "--node_ids", content_node, "network", channel_id])
-    else:
-        os.waitpid(pid, 0)
+def import_content(channel_id, content_node_list):
+    content_nodes = content_node_list.split(',')
+    for node in content_nodes:
+        pid = os.fork()
+        if pid == 0:
+            main(["manage", "importcontent", "--node_ids", node, "--import_updates", "network", channel_id])
+        else:
+            os.waitpid(pid, 0)
 
 def facility_sync(sync_server, facility_id):
     pid = os.fork()
@@ -91,9 +93,10 @@ def facility_sync(sync_server, facility_id):
     else:
         os.waitpid(pid, 0)
 
-def import_resources(default_sync_params):
-    import_channel(default_sync_params['channel'])
-    import_content(default_sync_params['channel'], default_sync_params['node'])
+def import_resources(default_sync_params, import_channel):
+    if (import_channel):
+        import_channel(default_sync_params['channel'])
+    import_content(default_sync_params['channel'], default_sync_params['node_list'])
 
 # MSS Cloud sync for multifacilities on user device
 def run_sync():
@@ -123,7 +126,7 @@ def run_sync():
             sys.stdout = sys.__stdout__
 
             import_facility(default_sync_params, facility_id)
-            import_resources(default_sync_params)
+            import_resources(default_sync_params, import_channel=True)
 
         else: # handling the case of default app or where facility may have been deleted on server side
             configur['DEFAULT'] = { 'SYNC_ON': 'True',
@@ -135,7 +138,7 @@ def run_sync():
 
     update_sync_config_file(sync_config_filename, facility_id)
     default_sync_params = get_sync_params(syncini_file, grade)
-    import_resources(default_sync_params)
+    import_resources(default_sync_params, import_channel=False)
     
     if (default_sync_params['sync_on']):
         threading.Timer(default_sync_params['sync_delay'], run_sync).start()
