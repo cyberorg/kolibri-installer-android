@@ -89,7 +89,7 @@ def import_content(channel_id, content_node_list):
 def facility_sync(sync_server, facility_id):
     pid = os.fork()
     if pid == 0:
-        main(["manage", "sync", "--baseurl", sync_server, "--facility", facility_id, "--verbosity", "3"])
+        main(["manage", "sync", "--baseurl", sync_server, "--facility", facility_id])
     else:
         os.waitpid(pid, 0)
 
