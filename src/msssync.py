@@ -17,7 +17,7 @@ def get_sync_config_file_location(sync_config_filename):
 
 def fetch_remote_sync_file(sync_config_filename, facility_id):
     try:
-        url = 'http://content.myscoolserver.in/configs/' + facility_id + '/' + sync_config_filename
+        url = 'http://content.myscoolserver.in/configs/' + facility_id + '/' + sync_config_filename # TODO first check existence of a syncoptions.ini and URL therein else default to hardcoded one
         r = requests.get(url, allow_redirects=True)
         syncini_file = get_sync_config_file_location(sync_config_filename)
         open(syncini_file, 'wb').write(r.content)
@@ -104,8 +104,8 @@ def run_sync():
 #    logging.disable(logging.INFO)
 #    logging.disable(logging.WARNING)
     sync_config_filename = 'syncoptions.ini'
-    facility_id = 'bd7acfae2045fa0c09289a2b456cf9ab' # ideally should transfer it to config.py if hardcoded or take as input from user
-    grade = 'TEN'
+    facility_id = 'bd7acfae2045fa0c09289a2b456cf9ab' # TODO ideally should transfer it to config.py if hardcoded or take as input from user
+    grade = 'TEN' # TODO  ideally should transfer it to config.py if hardcoded or take as input from user
     configur = ConfigParser()
 
     try:
