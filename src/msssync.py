@@ -35,7 +35,7 @@ def get_sync_params(syncini_file, grade):
 
     try:
         file = open(syncini_file, 'r')
-    except IOError:
+    except FileNotFoundError:
         logging.info("Facility sync file not available")
 
     configur.read(syncini_file)
@@ -60,7 +60,7 @@ def delete_import_credentials(syncini_file):
         configur.remove_option('DEFAULT', 'SYNC_ADMIN_PASSWORD')
         with open(syncini_file,"w") as configfile:
             configur.write(configfile)
-    except IOError:
+    except FileNotFoundError:
         logging.info("Facility sync file not available")
 
 def import_facility(sync_params, facility_id):
