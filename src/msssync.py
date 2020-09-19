@@ -128,6 +128,8 @@ def run_sync():
     logging.basicConfig(level=logging.INFO)
 #    logging.disable(logging.INFO)
 #    logging.disable(logging.WARNING)
+    # Setting as non-empty string as a tag for start of sync and import process
+    update_progress_for_user(" ")
     sync_config_filename = 'syncoptions.ini'
     facility_id = 'bd7acfae2045fa0c09289a2b456cf9ab' # TODO ideally should transfer it to config.py if hardcoded or take as input from user
     grade = 'TEN' # TODO  ideally should transfer it to config.py if hardcoded or take as input from user

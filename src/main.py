@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 import pew
 import pew.ui
 
+from bs4 import BeautifulSoup
 from config import KOLIBRI_PORT
 
 pew.set_app_name("Kolibri")
@@ -106,12 +107,41 @@ class Application(pew.ui.PEWApp):
             self.view.webview.webview.clearHistory()
 
     def wait_for_server(self):
+        def start_import_and_sync():
+            from msssync import run_sync
+            self.msssync_thread = pew.ui.PEWThread(target=run_sync)
+            self.msssync_thread.daemon = True
+            self.msssync_thread.start()
+
+        def importing():
+            loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
+            # load the file
+            with open(loader_page) as inf:
+                txt = inf.read()
+                soup = BeautifulSoup(txt, 'html.parser')
+
+            status_tag =  soup.find(id = 'importstatus')
+            if (status_tag.string == ""):
+                return False
+            else:
+                return True
+
         home_url = "http://localhost:{port}".format(port=KOLIBRI_PORT)
         # test url to see if server has started
         def running():
             try:
                 with urllib.request.urlopen(home_url) as response:
                    response.read()
+
+                # Attempt import and sync only after server has started
+                start_import_and_sync()
+                # Tie up this thread until the import has not finished
+                while importing():
+                    logging.info(
+                    "Content being imported."
+                )
+                time.sleep(1)
+
                 return True
             except urllib.error.URLError:
                 return False
@@ -139,11 +169,6 @@ class Application(pew.ui.PEWApp):
             self.remoteshell_thread = pew.ui.PEWThread(target=launch_remoteshell)
             self.remoteshell_thread.daemon = True
             self.remoteshell_thread.start()
-
-        from msssync import run_sync
-        self.msssync_thread = pew.ui.PEWThread(target=run_sync)
-        self.msssync_thread.daemon = True
-        self.msssync_thread.start()
 
     def get_main_window(self):
         return self.view
