@@ -1,4 +1,4 @@
-#import initialization
+import initialization
 
 import time
 import logging
@@ -41,6 +41,7 @@ def fetch_remote_sync_file(sync_config_filename, facility_id):
         return syncini_file
     except RequestException:
         # Need to inform the user to connect the device to the Internet
+        update_progress_message("Connect the device to the internet to start first time setup.")
         return fetch_remote_sync_file(sync_config_filename, facility_id)
 
 def update_sync_config_file(sync_config_filename, facility_id):
@@ -186,5 +187,3 @@ def run_sync():
                 if sync_facility_id in configur:
                     sync_server = configur.get(sync_facility_id, 'SYNC_SERVER')
                 facility_sync(sync_server, sync_facility_id)
-
-run_sync()
