@@ -108,6 +108,8 @@ def import_content(channel_id, content_node_list):
         else:
             os.waitpid(pid, 0)
             update_progress_for_user("Importing content resources - Completed.")
+            time.sleep(1)
+            update_progress_for_user("")
 
 def facility_sync(sync_server, facility_id):
     pid = os.fork()
