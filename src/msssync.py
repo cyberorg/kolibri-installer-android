@@ -12,7 +12,7 @@ from kolibri.utils.cli import main
 
 from bs4 import BeautifulSoup
 
-def update_progress_for_user(current_status):
+def update_progress_message(current_status):
     
     loader_page = os.path.abspath(os.path.join("../","assets", "_load.html"))
     # load the file
@@ -83,33 +83,33 @@ def delete_import_credentials(syncini_file):
 def import_facility(sync_params, facility_id):
     pid = os.fork()
     if pid == 0:
-        update_progress_for_user("Importing institution data...")
+        update_progress_message("Importing institution data...")
         main(["manage", "sync", "--baseurl", sync_params['sync_server'], "--facility", facility_id, "--username", sync_params['sync_user'], "--password", sync_params['sync_password'], "--no-push", "--noninteractive"])
     else:
         os.waitpid(pid, 0)
-        update_progress_for_user("Importing institution data - Completed.")
+        update_progress_message("Importing institution data - Completed.")
 
 def import_channel(channel_id):
     pid = os.fork()
     if pid == 0:
-        update_progress_for_user("Importing content channel...")
+        update_progress_message("Importing content channel...")
         main(["manage", "importchannel", "network", channel_id])
     else:
         os.waitpid(pid, 0)
-        update_progress_for_user("Importing content channel - Completed.")
+        update_progress_message("Importing content channel - Completed.")
 
 def import_content(channel_id, content_node_list):
     content_nodes = content_node_list.split(',')
     for node in content_nodes:
         pid = os.fork()
-        update_progress_for_user("Importing content resources...")
+        update_progress_message("Importing content resources...")
         if pid == 0:
             main(["manage", "importcontent", "--node_ids", node, "--import_updates", "network", channel_id])
         else:
             os.waitpid(pid, 0)
-            update_progress_for_user("Importing content resources - Completed.")
+            update_progress_message("Importing content resources - Completed.")
             time.sleep(1)
-            update_progress_for_user("")
+            update_progress_message("")
 
 def facility_sync(sync_server, facility_id):
     pid = os.fork()
@@ -129,7 +129,7 @@ def run_sync():
 #    logging.disable(logging.INFO)
 #    logging.disable(logging.WARNING)
     # Setting as non-empty string as a tag for start of sync and import process
-    update_progress_for_user(" ")
+    update_progress_message(" ")
     sync_config_filename = 'syncoptions.ini'
     facility_id = 'bd7acfae2045fa0c09289a2b456cf9ab' # TODO ideally should transfer it to config.py if hardcoded or take as input from user
     grade = 'TEN' # TODO  ideally should transfer it to config.py if hardcoded or take as input from user
