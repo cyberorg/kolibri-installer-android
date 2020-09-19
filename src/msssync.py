@@ -1,4 +1,4 @@
-import initialization
+#import initialization
 
 import time
 import logging
@@ -10,6 +10,23 @@ import requests
 from configparser import ConfigParser
 from kolibri.utils.cli import main
 
+from bs4 import BeautifulSoup
+
+def update_progress_for_user(current_status):
+    
+    loader_page = os.path.abspath(os.path.join("../","assets", "_load.html"))
+    # load the file
+    with open(loader_page) as inf:
+        txt = inf.read()
+        soup = BeautifulSoup(txt, 'html.parser')
+
+    status_tag =  soup.find(id = 'importstatus')
+    status_tag.string.replace_with(current_status)
+    
+    # save the file again
+    with open(loader_page, "w") as outf:
+        outf.write(str(soup))
+        
 def get_sync_config_file_location(sync_config_filename):
     kolibri_home = os.environ.get("KOLIBRI_HOME")
     syncini_file = os.path.join(kolibri_home, sync_config_filename)
@@ -66,25 +83,31 @@ def delete_import_credentials(syncini_file):
 def import_facility(sync_params, facility_id):
     pid = os.fork()
     if pid == 0:
+        update_progress_for_user("Importing institution data...")
         main(["manage", "sync", "--baseurl", sync_params['sync_server'], "--facility", facility_id, "--username", sync_params['sync_user'], "--password", sync_params['sync_password'], "--no-push", "--noninteractive"])
     else:
         os.waitpid(pid, 0)
+        update_progress_for_user("Importing institution data - Completed.")
 
 def import_channel(channel_id):
     pid = os.fork()
     if pid == 0:
+        update_progress_for_user("Importing content channel...")
         main(["manage", "importchannel", "network", channel_id])
     else:
         os.waitpid(pid, 0)
+        update_progress_for_user("Importing content channel - Completed.")
 
 def import_content(channel_id, content_node_list):
     content_nodes = content_node_list.split(',')
     for node in content_nodes:
         pid = os.fork()
+        update_progress_for_user("Importing content resources...")
         if pid == 0:
             main(["manage", "importcontent", "--node_ids", node, "--import_updates", "network", channel_id])
         else:
             os.waitpid(pid, 0)
+            update_progress_for_user("Importing content resources - Completed.")
 
 def facility_sync(sync_server, facility_id):
     pid = os.fork()
@@ -93,8 +116,8 @@ def facility_sync(sync_server, facility_id):
     else:
         os.waitpid(pid, 0)
 
-def import_resources(default_sync_params, import_channel):
-    if (import_channel):
+def import_resources(default_sync_params, channel_import):
+    if (channel_import):
         import_channel(default_sync_params['channel'])
     import_content(default_sync_params['channel'], default_sync_params['node_list'])
 
@@ -126,7 +149,7 @@ def run_sync():
             sys.stdout = sys.__stdout__
 
             import_facility(default_sync_params, facility_id)
-            import_resources(default_sync_params, import_channel=True)
+            import_resources(default_sync_params, channel_import=True)
 
         else: # handling the case of default app or where facility may have been deleted on server side
             configur['DEFAULT'] = { 'SYNC_ON': 'True',
@@ -138,7 +161,7 @@ def run_sync():
 
     update_sync_config_file(sync_config_filename, facility_id)
     default_sync_params = get_sync_params(syncini_file, grade)
-    import_resources(default_sync_params, import_channel=False)
+    import_resources(default_sync_params, channel_import=False)
     
     if (default_sync_params['sync_on']):
         threading.Timer(default_sync_params['sync_delay'], run_sync).start()
@@ -159,3 +182,5 @@ def run_sync():
                 if sync_facility_id in configur:
                     sync_server = configur.get(sync_facility_id, 'SYNC_SERVER')
                 facility_sync(sync_server, sync_facility_id)
+
+run_sync()
