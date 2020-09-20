@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 
 def update_progress_message(current_status):
     
-    loader_page = os.path.abspath(os.path.join("../","assets", "_load.html"))
+    loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
     # load the file
     with open(loader_page) as inf:
         txt = inf.read()
