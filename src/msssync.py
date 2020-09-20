@@ -99,21 +99,19 @@ def import_channel(channel_id):
         os.waitpid(pid, 0)
         update_progress_message("Importing content channel - Completed.")
 
-def import_content(channel_id, content_node_list):
-    content_nodes = content_node_list.split(',')
-    for node in content_nodes:
-        pid = os.fork()
+def import_content(channel_id, content_node):
+    pid = os.fork()
+    if pid == 0:
         update_progress_message("Importing content resources...")
-        if pid == 0:
-            main(["manage", "importcontent", "--node_ids", node, "--import_updates", "network", channel_id])
-        else:
-            os.waitpid(pid, 0)
-            update_progress_message("Importing content resources - Completed.")
-            time.sleep(1)
-            # Tagging for end of minimal import process completion
-            update_progress_message("Let the learning begin...")
-            # Giving enough time for parallel thread to proceed with application UI loading
-            time.sleep(2)
+        main(["manage", "importcontent", "--node_ids", content_node, "network", channel_id])
+    else:
+        os.waitpid(pid, 0)
+        update_progress_message("Importing content resources - Completed.")
+        time.sleep(1)
+        # Tagging for end of minimal import process completion
+        update_progress_message("Let the learning begin...")
+        # Giving enough time for parallel thread to proceed with application UI loading
+        time.sleep(2)
 
 def facility_sync(sync_server, facility_id):
     pid = os.fork()
@@ -125,7 +123,8 @@ def facility_sync(sync_server, facility_id):
 def import_resources(default_sync_params, channel_import):
     if (channel_import):
         import_channel(default_sync_params['channel'])
-    import_content(default_sync_params['channel'], default_sync_params['node_list'])
+    for content_node in default_sync_params['node_list'].split(','):
+        import_content(default_sync_params['channel'], content_node)
 
 # MSS Cloud sync for multifacilities on user device
 def run_sync():
