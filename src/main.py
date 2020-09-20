@@ -108,19 +108,6 @@ class Application(pew.ui.PEWApp):
 
     def wait_for_server(self):
 
-        def importing():
-            loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
-            # load the file
-            with open(loader_page) as inf:
-                txt = inf.read()
-                soup = BeautifulSoup(txt, 'html.parser')
-
-            status_tag =  soup.find(id = 'importstatus')
-            if (status_tag.string == ""):
-                return False
-            else:
-                return True
-
         home_url = "http://localhost:{port}".format(port=KOLIBRI_PORT)
         # test url to see if server has started
         def running():
@@ -137,18 +124,37 @@ class Application(pew.ui.PEWApp):
                 "Kolibri server not yet started, checking again in one second..."
             )
             time.sleep(1)
+        
+        # Test change in loader's import status string to proceed upon import completion
+        def importing():
+            loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
+            # load the file
+            with open(loader_page) as inf:
+                txt = inf.read()
+                soup = BeautifulSoup(txt, 'html.parser')
 
+            status_tag = soup.find(id = 'importstatus')
+            if (status_tag is not None and status_tag.string == "Let the learning begin..."):
+                return False
+            else:
+                return True
+
+        # Ensuring a non-null string as a tag for start of import process 
+        from msssync import update_progress_message
+        update_progress_message("...")
+
+        # Kickstarting the import and sync processes
         from msssync import run_sync
         self.msssync_thread = pew.ui.PEWThread(target=run_sync)
         self.msssync_thread.daemon = True
         self.msssync_thread.start()
 
-        # Tie up this thread until the import has not finished
+        # Tie up the import thread until the import has not finished
         while importing():
             logging.info(
-            "Content being imported."
-        )
-        time.sleep(1)
+                "Content being imported."
+            )
+            time.sleep(1)
 
         # Check for saved URL, which exists when the app was put to sleep last time it ran
         saved_state = self.view.get_view_state()
