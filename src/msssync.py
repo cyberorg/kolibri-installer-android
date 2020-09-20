@@ -33,20 +33,28 @@ def get_sync_config_file_location(sync_config_filename):
     return syncini_file
 
 def fetch_remote_sync_file(sync_config_filename, facility_id):
+    url = 'http://content.myscoolserver.in/configs/' + facility_id + '/' + sync_config_filename # TODO first check existence of a syncoptions.ini and URL therein else default to hardcoded one
+    r = requests.get(url, allow_redirects=True)
+
+    # write the newly fetched config file
+    syncini_file = get_sync_config_file_location(sync_config_filename)
+    open(syncini_file, 'wb').write(r.content)
+
+    return syncini_file
+
+def fetch_sync_config_file(sync_config_filename, facility_id):
     try:
-        url = 'http://content.myscoolserver.in/configs/' + facility_id + '/' + sync_config_filename # TODO first check existence of a syncoptions.ini and URL therein else default to hardcoded one
-        r = requests.get(url, allow_redirects=True)
-        syncini_file = get_sync_config_file_location(sync_config_filename)
-        open(syncini_file, 'wb').write(r.content)
-        return syncini_file
+        return fetch_remote_sync_file(sync_config_filename, facility_id)
     except RequestException:
         # Need to inform the user to connect the device to the Internet
-        update_progress_message("Connect the device to the internet to start first time setup.")
-        return fetch_remote_sync_file(sync_config_filename, facility_id)
+        update_progress_message("Connect the device to the internet for initial setup.")
+        return fetch_sync_config_file(sync_config_filename, facility_id)
 
 def update_sync_config_file(sync_config_filename, facility_id):
-    syncini_file = fetch_remote_sync_file(sync_config_filename, facility_id)
-    delete_import_credentials(syncini_file)
+    try:
+        return fetch_remote_sync_file(sync_config_filename, facility_id)
+    except RequestException:
+        return get_sync_config_file_location(sync_config_filename)
 
 def get_sync_params(syncini_file, grade):
     configur = ConfigParser()
@@ -65,6 +73,8 @@ def get_sync_params(syncini_file, grade):
     sync_params['node_list'] = configur.get('DEFAULT', grade + '_NODE_LIST')
     sync_params['sync_user'] = configur.get('DEFAULT', 'SYNC_ADMIN', fallback=None)
     sync_params['sync_password'] = configur.get('DEFAULT', 'SYNC_ADMIN_PASSWORD', fallback=None)
+    # always cleanup admin credentials
+    delete_import_credentials(syncini_file)
 
     return sync_params
 
@@ -84,7 +94,7 @@ def delete_import_credentials(syncini_file):
 def import_facility(sync_params, facility_id):
     pid = os.fork()
     if pid == 0:
-        update_progress_message("Importing institution data...")
+        update_progress_message("Initial setup - Importing institution data...")
         main(["manage", "sync", "--baseurl", sync_params['sync_server'], "--facility", facility_id, "--username", sync_params['sync_user'], "--password", sync_params['sync_password'], "--no-push", "--noninteractive"])
     else:
         os.waitpid(pid, 0)
@@ -93,7 +103,7 @@ def import_facility(sync_params, facility_id):
 def import_channel(channel_id):
     pid = os.fork()
     if pid == 0:
-        update_progress_message("Importing content channel...")
+        update_progress_message("Intial setup - Importing content channel...")
         main(["manage", "importchannel", "network", channel_id])
     else:
         os.waitpid(pid, 0)
@@ -102,12 +112,12 @@ def import_channel(channel_id):
 def import_content(channel_id, content_node):
     pid = os.fork()
     if pid == 0:
-        update_progress_message("Importing content resources...")
+        update_progress_message("Initial setup - Importing learning resources...")
         main(["manage", "importcontent", "--node_ids", content_node, "network", channel_id])
     else:
         os.waitpid(pid, 0)
-        update_progress_message("Importing content resources - Completed.")
-        time.sleep(1)
+        update_progress_message("Partial resources imported. Learning can start. Remaining resources shall be imported in the background whenever internet is connected.")
+        time.sleep(2)
         # Tagging for end of minimal import process completion
         update_progress_message("Let the learning begin...")
         # Giving enough time for parallel thread to proceed with application UI loading
@@ -120,11 +130,11 @@ def facility_sync(sync_server, facility_id):
     else:
         os.waitpid(pid, 0)
 
-def import_resources(default_sync_params, channel_import):
-    if (channel_import):
-        import_channel(default_sync_params['channel'])
+def import_resources(default_sync_params):
+    # Channel import fetches updted channel data when available, hence must be tried everytime
+    import_channel(default_sync_params['channel'])
     for content_node in default_sync_params['node_list'].split(','):
-        import_content(default_sync_params['channel'], content_node)
+        import_content(default_sync_params['channel'], content_node)   
 
 # MSS Cloud sync for multifacilities on user device
 def run_sync():
@@ -143,9 +153,8 @@ def run_sync():
     except FileNotFoundError:
 
         if (facility_id):
-            syncini_file = fetch_remote_sync_file(sync_config_filename, facility_id)
+            syncini_file = fetch_sync_config_file(sync_config_filename, facility_id)
             default_sync_params = get_sync_params(syncini_file, grade)
-            delete_import_credentials(syncini_file)
 
             from django.core.management import execute_from_command_line
             sys.__stdout__ = sys.stdout
@@ -153,8 +162,15 @@ def run_sync():
             execute_from_command_line(sys.argv)
             sys.stdout = sys.__stdout__
 
-            import_facility(default_sync_params, facility_id)
-            import_resources(default_sync_params, channel_import=True)
+            try:
+                import_facility(default_sync_params, facility_id)
+            except requests.exceptions.HTTPError: # raised when unable to connect due to morango certificate unavailability
+                # refetch and try to handle credentials change case
+                syncini_file = fetch_sync_config_file(sync_config_filename, facility_id)
+                default_sync_params = get_sync_params(syncini_file, grade)
+                import_facility(default_sync_params, facility_id)
+
+            import_resources(default_sync_params)
 
         else: # handling the case of default app or where facility may have been deleted on server side
             configur['DEFAULT'] = { 'SYNC_ON': 'True',
@@ -164,10 +180,14 @@ def run_sync():
             with open(syncini_file, 'w') as config_file:
                 configur.write(config_file)
 
-    update_sync_config_file(sync_config_filename, facility_id)
+    # Try to fetch an updated config file if online else continue with existing file
+    syncini_file = update_sync_config_file(sync_config_filename, facility_id)
     default_sync_params = get_sync_params(syncini_file, grade)
-    import_resources(default_sync_params, channel_import=False)
-    
+    try:
+        import_resources(default_sync_params)
+    except requests.exceptions.HTTPError:
+        logging.info('Will attempt again when connection to server is available')
+
     if (default_sync_params['sync_on']):
         threading.Timer(default_sync_params['sync_delay'], run_sync).start()
         
