@@ -110,7 +110,10 @@ def import_content(channel_id, content_node_list):
             os.waitpid(pid, 0)
             update_progress_message("Importing content resources - Completed.")
             time.sleep(1)
-            update_progress_message("")
+            # Tagging for end of minimal import process completion
+            update_progress_message("Let the learning begin...")
+            # Giving enough time for parallel thread to proceed with application UI loading
+            time.sleep(2)
 
 def facility_sync(sync_server, facility_id):
     pid = os.fork()
@@ -129,8 +132,6 @@ def run_sync():
     logging.basicConfig(level=logging.INFO)
 #    logging.disable(logging.INFO)
 #    logging.disable(logging.WARNING)
-    # Setting as non-empty string as a tag for start of sync and import process
-    update_progress_message(" ")
     sync_config_filename = 'syncoptions.ini'
     facility_id = 'bd7acfae2045fa0c09289a2b456cf9ab' # TODO ideally should transfer it to config.py if hardcoded or take as input from user
     grade = 'TEN' # TODO  ideally should transfer it to config.py if hardcoded or take as input from user
