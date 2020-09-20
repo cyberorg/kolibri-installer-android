@@ -107,11 +107,6 @@ class Application(pew.ui.PEWApp):
             self.view.webview.webview.clearHistory()
 
     def wait_for_server(self):
-        def start_import_and_sync():
-            from msssync import run_sync
-            self.msssync_thread = pew.ui.PEWThread(target=run_sync)
-            self.msssync_thread.daemon = True
-            self.msssync_thread.start()
 
         def importing():
             loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
@@ -132,16 +127,6 @@ class Application(pew.ui.PEWApp):
             try:
                 with urllib.request.urlopen(home_url) as response:
                    response.read()
-
-                # Attempt import and sync only after server has started
-                start_import_and_sync()
-                # Tie up this thread until the import has not finished
-                while importing():
-                    logging.info(
-                    "Content being imported."
-                )
-                time.sleep(1)
-
                 return True
             except urllib.error.URLError:
                 return False
@@ -152,6 +137,18 @@ class Application(pew.ui.PEWApp):
                 "Kolibri server not yet started, checking again in one second..."
             )
             time.sleep(1)
+
+        from msssync import run_sync
+        self.msssync_thread = pew.ui.PEWThread(target=run_sync)
+        self.msssync_thread.daemon = True
+        self.msssync_thread.start()
+
+        # Tie up this thread until the import has not finished
+        while importing():
+            logging.info(
+            "Content being imported."
+        )
+        time.sleep(1)
 
         # Check for saved URL, which exists when the app was put to sleep last time it ran
         saved_state = self.view.get_view_state()
