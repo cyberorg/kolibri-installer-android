@@ -45,15 +45,16 @@ def fetch_remote_sync_file(sync_config_filename, facility_id):
 def fetch_sync_config_file(sync_config_filename, facility_id):
     try:
         return fetch_remote_sync_file(sync_config_filename, facility_id)
-    except RequestException:
+    except requests.exceptions.RequestException:
         # Need to inform the user to connect the device to the Internet
-        update_progress_message("Connect the device to the internet for initial setup.")
+        update_progress_message("Connect the device to the internet for initial setup. Trying again in 15 seconds.")
+        sleep(15)
         return fetch_sync_config_file(sync_config_filename, facility_id)
 
 def update_sync_config_file(sync_config_filename, facility_id):
     try:
         return fetch_remote_sync_file(sync_config_filename, facility_id)
-    except RequestException:
+    except requests.exceptions.RequestException:
         return get_sync_config_file_location(sync_config_filename)
 
 def get_sync_params(syncini_file, grade):
