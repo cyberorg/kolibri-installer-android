@@ -48,7 +48,7 @@ def fetch_sync_config_file(sync_config_filename, facility_id):
     except requests.exceptions.RequestException:
         # Need to inform the user to connect the device to the Internet
         update_progress_message("Connect the device to the internet for initial setup. Trying again in 15 seconds.")
-        sleep(15)
+        time.sleep(15)
         return fetch_sync_config_file(sync_config_filename, facility_id)
 
 def update_sync_config_file(sync_config_filename, facility_id):
@@ -139,9 +139,6 @@ def import_resources(default_sync_params):
 
 # MSS Cloud sync for multifacilities on user device
 def run_sync():
-    logging.basicConfig(level=logging.INFO)
-#    logging.disable(logging.INFO)
-#    logging.disable(logging.WARNING)
     sync_config_filename = 'syncoptions.ini'
     facility_id = 'bd7acfae2045fa0c09289a2b456cf9ab' # TODO ideally should transfer it to config.py if hardcoded or take as input from user
     grade = 'TEN' # TODO  ideally should transfer it to config.py if hardcoded or take as input from user
@@ -172,39 +169,24 @@ def run_sync():
                 import_facility(default_sync_params, facility_id)
 
             import_resources(default_sync_params)
+            time.sleep(default_sync_params['sync_delay'])
+            run_sync()
 
-        else: # handling the case of default app or where facility may have been deleted on server side
-            configur['DEFAULT'] = { 'SYNC_ON': 'True',
-                                    'SYNC_SERVER': 'content.myscoolserver.in',
-                                    'SYNC_DELAY': '900.0'
-                                    }
-            with open(syncini_file, 'w') as config_file:
-                configur.write(config_file)
+    default_sync_params = get_sync_params(syncini_file, grade)
+    threading.Timer(default_sync_params['sync_delay'], run_sync).start()
+
+    from django.core.management import execute_from_command_line
+    sys.__stdout__ = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
+    execute_from_command_line(sys.argv)
+    sys.stdout = sys.__stdout__
 
     # Try to fetch an updated config file if online else continue with existing file
     syncini_file = update_sync_config_file(sync_config_filename, facility_id)
     default_sync_params = get_sync_params(syncini_file, grade)
-    try:
-        import_resources(default_sync_params)
-    except requests.exceptions.HTTPError:
-        logging.info('Will attempt again when connection to server is available')
-
     if (default_sync_params['sync_on']):
-        threading.Timer(default_sync_params['sync_delay'], run_sync).start()
-        
-        from django.core.management import execute_from_command_line
-        sys.__stdout__ = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
-        execute_from_command_line(sys.argv)
-        sys.stdout = sys.__stdout__
-
-        from kolibri.core.auth.models import Facility
-        sync_facilities = Facility.objects.filter()
-        sync_server = default_sync_params['sync_server']
-        if sync_facilities:
-            configur.read(syncini_file)
-            for sync_facility in sync_facilities:
-                sync_facility_id = sync_facility.id
-                if sync_facility_id in configur:
-                    sync_server = configur.get(sync_facility_id, 'SYNC_SERVER')
-                facility_sync(sync_server, sync_facility_id)
+        facility_sync(default_sync_params['sync_server'], facility_id)      
+        try:
+            import_resources(default_sync_params)
+        except requests.exceptions.HTTPError:
+            logging.info('Will attempt again when connection to server is available')
