@@ -119,7 +119,7 @@ def import_content(channel_id, content_node):
         main(["manage", "importcontent", "--node_ids", content_node, "network", channel_id])
     else:
         os.waitpid(pid, 0)
-        update_progress_message("Partial resources imported. Learning can start. Remaining resources shall be imported in the background whenever internet is connected.")
+        update_progress_message("Partial resources imported. Rest shall be imported in the background whenever internet is connected.")
         time.sleep(2)
         # Tagging for end of minimal import process completion
         update_progress_message("Let the learning begin...")
