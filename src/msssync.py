@@ -153,28 +153,26 @@ def run_sync():
         file = open(syncini_file, 'r')
 
     except FileNotFoundError:
+        syncini_file = fetch_sync_config_file(sync_config_filename, facility_id)
+        default_sync_params = get_sync_params(syncini_file, grade)
 
-        if (facility_id):
+        from django.core.management import execute_from_command_line
+        sys.__stdout__ = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+        execute_from_command_line(sys.argv)
+        sys.stdout = sys.__stdout__
+
+        try:
+            import_facility(default_sync_params, facility_id)
+        except requests.exceptions.HTTPError: # raised when unable to connect due to morango certificate unavailability/mismatch due to admin credential change
+            # refetch and try to handle credentials change case
             syncini_file = fetch_sync_config_file(sync_config_filename, facility_id)
             default_sync_params = get_sync_params(syncini_file, grade)
+            import_facility(default_sync_params, facility_id)
 
-            from django.core.management import execute_from_command_line
-            sys.__stdout__ = sys.stdout
-            sys.stdout = open(os.devnull, 'w')
-            execute_from_command_line(sys.argv)
-            sys.stdout = sys.__stdout__
-
-            try:
-                import_facility(default_sync_params, facility_id)
-            except requests.exceptions.HTTPError: # raised when unable to connect due to morango certificate unavailability/mismatch due to admin credential change
-                # refetch and try to handle credentials change case
-                syncini_file = fetch_sync_config_file(sync_config_filename, facility_id)
-                default_sync_params = get_sync_params(syncini_file, grade)
-                import_facility(default_sync_params, facility_id)
-
-            import_resources(default_sync_params)
-            time.sleep(default_sync_params['sync_delay'])
-            run_sync()
+        import_resources(default_sync_params)
+        time.sleep(default_sync_params['sync_delay'])
+        run_sync()
 
     default_sync_params = get_sync_params(syncini_file, grade)
     threading.Timer(default_sync_params['sync_delay'], run_sync).start()
