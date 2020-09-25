@@ -164,6 +164,10 @@ def import_resources(default_sync_params):
         # Is the channel on device the same as that in sync config
         if (device_channel_id == config_channel_id):
             resp = requests.get(get_channel_lookup_url(identifier = device_channel_id, baseurl = content_server))
+            
+            if resp.status_code != 200:
+                return None
+
             (remote_channel_info,) =  resp.json()
             remote_channel_version = remote_channel_info.get("version")
             # Update the existing channel
