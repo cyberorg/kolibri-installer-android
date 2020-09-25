@@ -108,7 +108,7 @@ def import_channel(channel_id, content_server):
     pid = os.fork()
     if pid == 0:
         update_progress_message("Intial setup - Importing content channel...")
-        main(["manage", "importchannel", "network", channel_id], "--baseurl", content_server)
+        main(["manage", "importchannel", "network", channel_id, "--baseurl", content_server])
     else:
         os.waitpid(pid, 0)
         update_progress_message("Importing content channel - Completed.")
