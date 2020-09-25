@@ -71,6 +71,7 @@ def get_sync_params(syncini_file, grade):
     sync_params['sync_on'] = configur.getboolean('DEFAULT', 'SYNC_ON')
     sync_params['sync_delay'] = configur.getfloat('DEFAULT', 'SYNC_DELAY')
     sync_params['sync_server'] = configur.get('DEFAULT', 'SYNC_SERVER')
+    sync_params['content_server'] = configur.get('DEFAULT', 'SYNC_CONTENT_SERVER', fallback='studio.learningequality.org')
     sync_params['config_dir'] = configur.get('DEFAULT', 'SYNC_CONFIG_DIR')
     sync_params['channel'] = configur.get('DEFAULT','CHANNEL')
     sync_params['node_list'] = configur.get('DEFAULT', grade + '_NODE_LIST')
@@ -103,20 +104,20 @@ def import_facility(sync_params, facility_id):
         os.waitpid(pid, 0)
         update_progress_message("Importing institution data - Completed.")
 
-def import_channel(channel_id):
+def import_channel(channel_id, content_server):
     pid = os.fork()
     if pid == 0:
         update_progress_message("Intial setup - Importing content channel...")
-        main(["manage", "importchannel", "network", channel_id])
+        main(["manage", "importchannel", "network", channel_id], "--baseurl", content_server)
     else:
         os.waitpid(pid, 0)
         update_progress_message("Importing content channel - Completed.")
 
-def import_content(channel_id, content_node):
+def import_content(channel_id, content_node, content_server):
     pid = os.fork()
     if pid == 0:
         update_progress_message("Initial setup - Importing learning resources...")
-        main(["manage", "importcontent", "--node_ids", content_node, "network", channel_id])
+        main(["manage", "importcontent", "--node_ids", content_node, "network", channel_id, "--baseurl", "http://"+content_server])
     else:
         os.waitpid(pid, 0)
         update_progress_message("Partial resources imported. Rest shall be imported in the background whenever internet is connected.")
@@ -135,9 +136,9 @@ def facility_sync(sync_server, facility_id):
 
 def import_resources(default_sync_params):
     # Channel import fetches updated channel data when available, hence must be tried everytime
-    import_channel(default_sync_params['channel'])
+    import_channel(default_sync_params['channel'], default_sync_params['content_server'])
     for content_node in default_sync_params['node_list'].split(','):
-        import_content(default_sync_params['channel'], content_node)
+        import_content(default_sync_params['channel'], content_node, default_sync_params['content_server'])
     update_progress_message('...')
 
 # MSS Cloud sync on user device
