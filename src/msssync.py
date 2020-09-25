@@ -1,4 +1,4 @@
-# import initialization
+import initialization
 
 import time
 import logging
@@ -17,6 +17,8 @@ from kolibri.core.content.utils.paths import get_channel_lookup_url
 
 from bs4 import BeautifulSoup
 from config import SYNC_CONFIG_FILENAME, FACILITY_ID, GRADE, DEFAULT_SYNC_SERVER, DEFAULT_CONFIG_DIR
+
+logger = logging.getLogger(__name__)
 
 kolibri_home = os.environ.get('KOLIBRI_HOME')
 
@@ -71,7 +73,7 @@ def get_sync_params(syncini_file, grade):
     try:
         file = open(syncini_file, 'r')
     except FileNotFoundError:
-        logging.info('Facility sync file not available.')
+        logger.info('Facility sync file not available.')
 
     configur.read(syncini_file)
     sync_params = {}
@@ -100,7 +102,7 @@ def delete_import_credentials(syncini_file):
         with open(syncini_file,"w") as configfile:
             configur.write(configfile)
     except FileNotFoundError:
-        logging.info("Facility sync file not available")
+        logger.info("Facility sync file not available")
 
 def import_facility(sync_params, facility_id):
     pid = os.fork()
@@ -166,14 +168,17 @@ def import_resources(default_sync_params):
             remote_channel_version = remote_channel_info.get("version")
             # Update the existing channel
             if (device_channel_version < remote_channel_version):
+                logger.info(("New channel version {channel_version} available...updating.").format(channel_version=remote_channel_version,))
                 import_channel(device_channel_id, content_server)
         else:
             # Replace old channel with new configured channel
+            logger.info(("New channel {new_channel_id} replacing old channel {old_channel_id}").format(new_channel_id=config_channel_id, old_channel_id=device_channel_id,))
             import_channel(config_channel_id, content_server)
             delete_channel(device_channel_id)
             device_channel_id = config_channel_id
     else:
         device_channel_id = config_channel_id
+        logger.info(("Initial setup. Channel {channel_id} being imported.").format(channel_id=device_channel_id,))
         import_channel(device_channel_id, content_server)
 
     config_content_nodes = default_sync_params['node_list']
@@ -236,5 +241,5 @@ def run_sync():
         try:
             import_resources(default_sync_params)
         except requests.exceptions.HTTPError:
-            logging.info('Will attempt again when connection to server is available')
-run_sync()
+            logger.info('Will attempt again when connection to server is available')
+
