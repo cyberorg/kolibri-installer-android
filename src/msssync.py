@@ -1,4 +1,4 @@
-import initialization
+# import initialization
 
 import time
 import logging
@@ -10,8 +10,16 @@ import requests
 from configparser import ConfigParser
 from kolibri.utils.cli import main
 
+import django
+django.setup()
+from kolibri.core.content.utils.channels import get_channels_for_data_folder
+from kolibri.core.content.utils.paths import get_channel_lookup_url
+
 from bs4 import BeautifulSoup
 from config import SYNC_CONFIG_FILENAME, FACILITY_ID, GRADE, DEFAULT_SYNC_SERVER, DEFAULT_CONFIG_DIR
+
+kolibri_home = os.environ.get('KOLIBRI_HOME')
+
 
 def update_progress_message(current_status):
     
@@ -29,7 +37,6 @@ def update_progress_message(current_status):
         outf.write(str(soup))
         
 def get_sync_config_file_location(sync_config_filename):
-    kolibri_home = os.environ.get('KOLIBRI_HOME')
     syncini_file = os.path.join(kolibri_home, sync_config_filename)
     return syncini_file
 
@@ -71,7 +78,7 @@ def get_sync_params(syncini_file, grade):
     sync_params['sync_on'] = configur.getboolean('DEFAULT', 'SYNC_ON')
     sync_params['sync_delay'] = configur.getfloat('DEFAULT', 'SYNC_DELAY')
     sync_params['sync_server'] = configur.get('DEFAULT', 'SYNC_SERVER')
-    sync_params['content_server'] = configur.get('DEFAULT', 'SYNC_CONTENT_SERVER', fallback='studio.learningequality.org')
+    sync_params['content_server'] = 'http://' + configur.get('DEFAULT', 'SYNC_CONTENT_SERVER', fallback='studio.learningequality.org')
     sync_params['config_dir'] = configur.get('DEFAULT', 'SYNC_CONFIG_DIR')
     sync_params['channel'] = configur.get('DEFAULT','CHANNEL')
     sync_params['node_list'] = configur.get('DEFAULT', grade + '_NODE_LIST')
@@ -117,7 +124,7 @@ def import_content(channel_id, content_node, content_server):
     pid = os.fork()
     if pid == 0:
         update_progress_message("Initial setup - Importing learning resources...")
-        main(["manage", "importcontent", "--node_ids", content_node, "network", channel_id, "--baseurl", "http://"+content_server])
+        main(["manage", "importcontent", "--node_ids", content_node, "network", channel_id, "--baseurl", content_server])
     else:
         os.waitpid(pid, 0)
         update_progress_message("Partial resources imported. Rest shall be imported in the background whenever internet is connected.")
@@ -134,11 +141,45 @@ def facility_sync(sync_server, facility_id):
     else:
         os.waitpid(pid, 0)
 
+def delete_channel(channel_id):
+    pid = os.fork()
+    if pid == 0:
+        main(["manage", "deletechannel", "network", channel_id])
+    else:
+        os.waitpid(pid, 0)
+
 def import_resources(default_sync_params):
+    config_channel_id = default_sync_params['channel']
+    content_server = default_sync_params['content_server']
+
+    # Get info of channel on device
+    device_channel_list = get_channels_for_data_folder(kolibri_home)
+    if device_channel_list:
+        device_channel = device_channel_list[0]
+        device_channel_id = device_channel['id']
+        device_channel_version = device_channel['version']
+
+        # Is the channel on device the same as that in sync config
+        if (device_channel_id == config_channel_id):
+            resp = requests.get(get_channel_lookup_url(identifier = device_channel_id, baseurl = content_server))
+            (remote_channel_info,) =  resp.json()
+            remote_channel_version = remote_channel_info.get("version")
+            # Update the existing channel
+            if (device_channel_version < remote_channel_version):
+                import_channel(device_channel_id, content_server)
+        else:
+            # Replace old channel with new configured channel
+            import_channel(config_channel_id, content_server)
+            delete_channel(device_channel_id)
+            device_channel_id = config_channel_id
+    else:
+        device_channel_id = config_channel_id
+        import_channel(device_channel_id, content_server)
+
+    config_content_nodes = default_sync_params['node_list']
     # Channel import fetches updated channel data when available, hence must be tried everytime
-    import_channel(default_sync_params['channel'], default_sync_params['content_server'])
-    for content_node in default_sync_params['node_list'].split(','):
-        import_content(default_sync_params['channel'], content_node, default_sync_params['content_server'])
+    for content_node in config_content_nodes.split(','):
+        import_content(device_channel_id, content_node, content_server)
     update_progress_message('...')
 
 # MSS Cloud sync on user device
@@ -196,3 +237,4 @@ def run_sync():
             import_resources(default_sync_params)
         except requests.exceptions.HTTPError:
             logging.info('Will attempt again when connection to server is available')
+run_sync()
