@@ -68,10 +68,6 @@ class Application(pew.ui.PEWApp):
         Start your UI and app run loop here.
         """
         
-        # Ensuring a non-null string as a tag for start of import process 
-        from msssync import update_progress_message
-        update_progress_message("...")
-
         # Set loading screen
         loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
         self.loader_url = "file://{}".format(loader_page)

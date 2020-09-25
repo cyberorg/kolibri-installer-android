@@ -137,7 +137,8 @@ def import_resources(default_sync_params):
     # Channel import fetches updated channel data when available, hence must be tried everytime
     import_channel(default_sync_params['channel'])
     for content_node in default_sync_params['node_list'].split(','):
-        import_content(default_sync_params['channel'], content_node)   
+        import_content(default_sync_params['channel'], content_node)
+    update_progress_message('...')
 
 # MSS Cloud sync on user device
 def run_sync():
@@ -147,7 +148,7 @@ def run_sync():
     sync_server = DEFAULT_SYNC_SERVER
     config_dir = DEFAULT_CONFIG_DIR
     configur = ConfigParser()
-
+    update_progress_message('...')
     try:
         syncini_file = get_sync_config_file_location(sync_config_filename)
         file = open(syncini_file, 'r')
