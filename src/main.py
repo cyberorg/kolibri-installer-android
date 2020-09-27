@@ -134,7 +134,7 @@ class Application(pew.ui.PEWApp):
                 soup = BeautifulSoup(txt, 'html.parser')
 
             status_tag = soup.find(id = 'importstatus')
-            if (status_tag is not None and status_tag.string == "Let the learning begin..."):
+            if (status_tag and "Let the learning begin..." in status_tag.string) :
                 return False
             else:
                 return True

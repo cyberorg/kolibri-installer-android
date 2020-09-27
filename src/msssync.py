@@ -6,7 +6,7 @@ import os
 import sys
 import threading
 import requests
-
+from urllib3.exceptions import MaxRetryError, NewConnectionError
 from configparser import ConfigParser
 from kolibri.utils.cli import main
 
@@ -46,7 +46,11 @@ def get_sync_config_file_location(sync_config_filename):
 
 def fetch_remote_sync_file(sync_config_filename, facility_id, sync_server, config_dir):
     url = 'http://'+ sync_server + '/' + config_dir + '/' + facility_id + '/' + sync_config_filename
-    r = requests.get(url, allow_redirects=True)
+    try:
+        r = requests.get(url, allow_redirects=True)
+    except MaxRetryError as ex:
+        logger.error(ex)
+        update_progress_message("Updates will happen when online again. Let the learning begin...")
 
     # write the newly fetched config file
     syncini_file = get_sync_config_file_location(sync_config_filename)
@@ -57,7 +61,8 @@ def fetch_remote_sync_file(sync_config_filename, facility_id, sync_server, confi
 def fetch_sync_config_file(sync_config_filename, facility_id, sync_server = DEFAULT_SYNC_SERVER, config_dir = DEFAULT_CONFIG_DIR):
     try:
         return fetch_remote_sync_file(sync_config_filename, facility_id, sync_server, config_dir)
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as ex:
+        logger.error(ex)
         # Need to inform the user to connect the device to the Internet
         update_progress_message('Connect the device to the internet for initial setup. Trying again in 15 seconds.')
         time.sleep(15)
@@ -109,7 +114,7 @@ def delete_import_credentials(syncini_file):
 def import_facility(sync_params, facility_id):
     pid = os.fork()
     if pid == 0:
-        update_progress_message("Initial setup - Importing institution data...")
+        update_progress_message("Initial setup - Importing institution data...keep internet connected")
         main(["manage", "sync", "--baseurl", sync_params['sync_server'], "--facility", facility_id, "--username", sync_params['sync_user'], "--password", sync_params['sync_password'], "--no-push", "--noninteractive"])
     else:
         os.waitpid(pid, 0)
@@ -118,7 +123,7 @@ def import_facility(sync_params, facility_id):
 def import_channel(channel_id, content_server = DEFAULT_STUDIO_URL):
     pid = os.fork()
     if pid == 0:
-        update_progress_message("Intial setup - Importing content channel...")
+        update_progress_message("Intial setup - Importing content channel...keep internet connected")
         main(["manage", "importchannel", "network", channel_id, "--baseurl", content_server])
     else:
         os.waitpid(pid, 0)
@@ -127,7 +132,7 @@ def import_channel(channel_id, content_server = DEFAULT_STUDIO_URL):
 def import_content(channel_id, content_node, content_server, content_import_update):
     pid = os.fork()
     if pid == 0:
-        update_progress_message("Initial setup - Importing learning resources...")
+        update_progress_message("Initial setup - Importing learning resources...keep internet connected")
         if content_import_update:
             main(["manage", "importcontent", "--node_ids", content_node, "--import_updates", "network", channel_id, "--baseurl", content_server])
         else:
@@ -170,8 +175,13 @@ def import_resources(default_sync_params):
 
         # Is the channel on device the same as that in sync config
         if (device_channel_id == config_channel_id):
-            resp = requests.get(get_channel_lookup_url(identifier = device_channel_id, baseurl = content_server))
-            
+            try:
+                resp = requests.get(get_channel_lookup_url(identifier = device_channel_id, baseurl = content_server))
+            except requests.exceptions.ConnectionError as ex:
+                logger.error(ex)
+                update_progress_message("Updates will happen when online again. Let the learning begin...")
+                time.sleep(2)
+                return
             if resp.status_code != 200:
                 return None
 
