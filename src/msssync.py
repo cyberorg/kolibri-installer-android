@@ -15,8 +15,8 @@ django.setup()
 from kolibri.core.content.utils.channels import get_channels_for_data_folder
 from kolibri.core.content.utils.paths import get_channel_lookup_url
 
-from bs4 import BeautifulSoup
-from config import SYNC_CONFIG_FILENAME, FACILITY_ID, GRADE, DEFAULT_SYNC_SERVER, DEFAULT_CONFIG_DIR, DEFAULT_STUDIO_URL
+from bs4 import BeautifulSoup, Comment
+from config import SYNC_CONFIG_FILENAME, FACILITY_ID, GRADE, DEFAULT_SYNC_SERVER, DEFAULT_CONFIG_DIR, DEFAULT_STUDIO_URL, APP_NAME
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -24,6 +24,26 @@ logger = logging.getLogger(__name__)
 
 kolibri_home = os.environ.get('KOLIBRI_HOME')
 
+def check_and_notify_app_update(default_sync_params):
+    loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
+    # load the file
+    with open(loader_page) as inf:
+        txt = inf.read()
+        soup = BeautifulSoup(txt, 'html.parser')
+
+    app_version_tag = soup.find(id = 'syncappversion')
+    if app_version_tag.string != "Version : " + default_sync_params['latest_app_version']:
+       for comment in soup(text=lambda text: isinstance(text, Comment)):
+            if 'id="syncapplink"' in comment.string:
+                tag = BeautifulSoup(comment, 'html.parser')
+                app_name = APP_NAME.format(grade=GRADE)
+                tag.a['href'] = '/'.join([default_sync_params['content_server'], default_sync_params['config_dir'], FACILITY_ID, app_name])
+                comment.replace_with(tag)
+
+                # save the file again
+                with open(loader_page, 'w') as outf:
+                    outf.write(str(soup))
+                break 
 
 def update_progress_message(current_status):
     
@@ -84,6 +104,7 @@ def get_sync_params(syncini_file, grade):
 
     configur.read(syncini_file)
     sync_params = {}
+    sync_params['latest_app_version'] = configur.get('DEFAULT', 'SYNC_APP_VERSION')
     sync_params['sync_on'] = configur.getboolean('DEFAULT', 'SYNC_ON')
     sync_params['sync_delay'] = configur.getfloat('DEFAULT', 'SYNC_DELAY')
     sync_params['sync_server'] = configur.get('DEFAULT', 'SYNC_SERVER')
@@ -262,6 +283,7 @@ def run_sync():
     config_dir = default_sync_params['config_dir']
     syncini_file = update_sync_config_file(sync_config_filename, facility_id, sync_server, config_dir)
     default_sync_params = get_sync_params(syncini_file, grade)
+    check_and_notify_app_update(default_sync_params)
     if (default_sync_params['sync_on']):
         facility_sync(default_sync_params['sync_server'], facility_id)      
         try:
