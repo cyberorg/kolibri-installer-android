@@ -260,7 +260,7 @@ def run_sync():
             import_facility(default_sync_params, facility_id)
         except requests.exceptions.HTTPError: # raised when unable to connect due to morango certificate unavailability/mismatch due to admin credential change
             # refetch and try to handle credentials change case
-            time.sleep(1)
+            time.sleep(30)
             syncini_file = fetch_sync_config_file(sync_config_filename, facility_id)
             default_sync_params = get_sync_params(syncini_file, grade)
             import_facility(default_sync_params, facility_id)
