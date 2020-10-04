@@ -34,15 +34,16 @@ def check_and_notify_app_update(default_sync_params):
     app_version_tag = soup.find(id = 'syncappversion')
     if app_version_tag.string != "Version : " + default_sync_params['latest_app_version']:
        for comment in soup(text=lambda text: isinstance(text, Comment)):
-            if 'id="syncapplink"' in comment.string:
+            if 'id="appupdate"' in comment.string:
                 tag = BeautifulSoup(comment, 'html.parser')
                 app_name = APP_NAME.format(grade=GRADE)
-                tag.a['href'] = '/'.join([default_sync_params['content_server'], default_sync_params['config_dir'], FACILITY_ID, app_name])
+                tag.input['value'] = '/'.join([default_sync_params['content_server'], default_sync_params['config_dir'], FACILITY_ID, app_name])
                 comment.replace_with(tag)
 
                 # save the file again
                 with open(loader_page, 'w') as outf:
                     outf.write(str(soup))
+                    outf.close()
                 break 
 
 def update_progress_message(current_status):
@@ -59,6 +60,7 @@ def update_progress_message(current_status):
     # save the file again
     with open(loader_page, 'w') as outf:
         outf.write(str(soup))
+        outf.close()
         
 def get_sync_config_file_location(sync_config_filename):
     syncini_file = os.path.join(kolibri_home, sync_config_filename)
@@ -249,6 +251,7 @@ def run_sync():
     except FileNotFoundError:
         syncini_file = fetch_sync_config_file(sync_config_filename, facility_id)
         default_sync_params = get_sync_params(syncini_file, grade)
+        check_and_notify_app_update(default_sync_params)
 
         from django.core.management import execute_from_command_line
         sys.__stdout__ = sys.stdout
