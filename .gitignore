@@ -20,3 +20,15 @@ bin/
 build.log
 tmphome/
 static/
+
+# Needed only for development environment
+.vscode
+# Django and related deps
+src/asgiref/*
+src/asgiref-3.2.10.dist-info/*
+src/django/*
+src/Django-3.1.1.dist-info/*
+src/pytz/*
+src/pytz-2020.1.dist-info/*
+src/sqlparse/*
+src/sqlparse-0.3.1.dist-info/*

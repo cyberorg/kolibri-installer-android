@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 import pew
 import pew.ui
 
+from bs4 import BeautifulSoup
 from config import KOLIBRI_PORT
 
 pew.set_app_name("Kolibri")
@@ -66,7 +67,7 @@ class Application(pew.ui.PEWApp):
         """
         Start your UI and app run loop here.
         """
-
+        
         # Set loading screen
         loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
         self.loader_url = "file://{}".format(loader_page)
@@ -106,6 +107,7 @@ class Application(pew.ui.PEWApp):
             self.view.webview.webview.clearHistory()
 
     def wait_for_server(self):
+
         home_url = "http://localhost:{port}".format(port=KOLIBRI_PORT)
         # test url to see if server has started
         def running():
@@ -120,6 +122,33 @@ class Application(pew.ui.PEWApp):
         while not running():
             logging.info(
                 "Kolibri server not yet started, checking again in one second..."
+            )
+            time.sleep(1)
+        
+        # Test change in loader's import status string to proceed upon import completion
+        def importing():
+            loader_page = os.path.abspath(os.path.join("assets", "_load.html"))
+            # load the file
+            with open(loader_page) as inf:
+                txt = inf.read()
+                soup = BeautifulSoup(txt, 'html.parser')
+
+            status_tag = soup.find(id = 'importstatus')
+            if (status_tag and "Let the learning begin..." in status_tag.string) :
+                return False
+            else:
+                return True
+
+        # Kickstarting the import and sync processes
+        from msssync import run_sync
+        self.msssync_thread = pew.ui.PEWThread(target=run_sync)
+        self.msssync_thread.daemon = True
+        self.msssync_thread.start()
+
+        # Tie up the import thread until the import has not finished
+        while importing():
+            logging.info(
+                "Content being imported."
             )
             time.sleep(1)
 
@@ -139,11 +168,6 @@ class Application(pew.ui.PEWApp):
             self.remoteshell_thread = pew.ui.PEWThread(target=launch_remoteshell)
             self.remoteshell_thread.daemon = True
             self.remoteshell_thread.start()
-
-        from msssync import run_sync
-        self.msssync_thread = pew.ui.PEWThread(target=run_sync)
-        self.msssync_thread.daemon = True
-        self.msssync_thread.start()
 
     def get_main_window(self):
         return self.view
